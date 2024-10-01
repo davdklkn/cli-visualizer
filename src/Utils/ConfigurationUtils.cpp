@@ -74,6 +74,8 @@ const std::string k_spectrum_left_margin_setting{
 
 const std::string k_spectrum_reversed_setting{"visualizer.spectrum.reversed"};
 
+const std::string k_spectrum_sideways_setting{"visualizer.spectrum.sideways"};
+
 const std::string k_monstercat_smoothing_factor_setting{
     "visualizer.monstercat.smoothing.factor"};
 
@@ -687,6 +689,10 @@ void vis::ConfigurationUtils::load_settings(
     settings->set_is_spectrum_reversed(
         Utils::get(properties, k_spectrum_reversed_setting,
                    VisConstants::k_default_spectrum_reversed));
+
+    settings->set_is_spectrum_sideways(
+        Utils::get(properties, k_spectrum_sideways_setting,
+                   VisConstants::k_default_spectrum_sideways));
 
     settings->set_monstercat_smoothing_factor(
         Utils::get(properties, k_monstercat_smoothing_factor_setting,

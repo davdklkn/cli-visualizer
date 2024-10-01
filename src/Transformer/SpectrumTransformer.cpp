@@ -93,122 +93,244 @@ void vis::SpectrumTransformer::execute(pcm_stereo_sample *buffer,
                                        vis::NcursesWriter *writer,
                                        const bool is_stereo)
 {
-    const auto win_height = NcursesUtils::get_window_height();
-    const auto win_width = NcursesUtils::get_window_width();
-
-    auto right_margin = static_cast<int32_t>(
-        m_settings->get_spectrum_right_margin() * win_width);
-    auto left_margin = static_cast<int32_t>(
-        m_settings->get_spectrum_left_margin() * win_width);
-
-    auto width = win_width - right_margin - left_margin;
-
-    bool is_silent_left = true;
-    bool is_silent_right = true;
-
-    if (is_stereo)
+    if (m_settings->is_spectrum_sideways())
     {
-        is_silent_left =
-            prepare_fft_input(buffer, m_settings->get_sample_size(),
-                              m_fftw_input_left, vis::ChannelMode::Left);
-        is_silent_right =
-            prepare_fft_input(buffer, m_settings->get_sample_size(),
-                              m_fftw_input_right, vis::ChannelMode::Right);
-    }
-    else
-    {
-        is_silent_left =
-            prepare_fft_input(buffer, m_settings->get_sample_size(),
-                              m_fftw_input_left, vis::ChannelMode::Both);
-    }
+        const auto win_width = NcursesUtils::get_window_height();
+        const auto win_height = NcursesUtils::get_window_width();
 
-    if (!(is_silent_left && is_silent_right))
-    {
-        m_silent_runs = 0;
-    }
-    // if there is no sound, do not do any processing and sleep
-    else
-    {
-        ++m_silent_runs;
-    }
+        auto right_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_right_margin() * win_width);
+        auto left_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_left_margin() * win_width);
 
-    if (m_silent_runs < k_max_silent_runs_before_sleep)
-    {
-        m_fftw_plan_left = fftw_plan_dft_r2c_1d(
-            static_cast<int>(m_settings->get_sample_size()), m_fftw_input_left,
-            m_fftw_output_left, FFTW_ESTIMATE);
+        auto width = win_width - right_margin - left_margin;
 
-        if (is_stereo)
+        bool is_silent_left = true;
+        bool is_silent_right = true;
+
+        if (1 || is_stereo)
         {
-            m_fftw_plan_right = fftw_plan_dft_r2c_1d(
-                static_cast<int>(m_settings->get_sample_size()),
-                m_fftw_input_right, m_fftw_output_right, FFTW_ESTIMATE);
+            is_silent_left =
+                prepare_fft_input(buffer, m_settings->get_sample_size(),
+                                m_fftw_input_left, vis::ChannelMode::Left);
+            is_silent_right =
+                prepare_fft_input(buffer, m_settings->get_sample_size(),
+                                m_fftw_input_right, vis::ChannelMode::Right);
+        }
+        else
+        {
+            is_silent_left =
+                prepare_fft_input(buffer, m_settings->get_sample_size(),
+                                m_fftw_input_left, vis::ChannelMode::Both);
         }
 
-        std::wstring bar_row_msg =
-            create_bar_row_msg(m_settings->get_spectrum_character(),
-                               m_settings->get_spectrum_bar_width());
-
-        auto number_of_bars = std::max(
-            static_cast<uint32_t>(std::floor(
-                static_cast<uint32_t>(width) /
-                (bar_row_msg.size() + m_settings->get_spectrum_bar_spacing()))),
-            1u);
-
-        fftw_execute(m_fftw_plan_left);
-
-        if (is_stereo)
+        if (!(is_silent_left && is_silent_right))
         {
-            fftw_execute(m_fftw_plan_right);
+            m_silent_runs = 0;
+        }
+        // if there is no sound, do not do any processing and sleep
+        else
+        {
+            ++m_silent_runs;
         }
 
-        auto top_margin = static_cast<int32_t>(
-            m_settings->get_spectrum_top_margin() * win_height);
-
-        auto height = win_height;
-        height -= top_margin;
-        if (is_stereo)
+        if (m_silent_runs < k_max_silent_runs_before_sleep)
         {
-            height = height / 2;
-        }
+            m_fftw_plan_left = fftw_plan_dft_r2c_1d(
+                static_cast<int>(m_settings->get_sample_size()), m_fftw_input_left,
+                m_fftw_output_left, FFTW_ESTIMATE);
 
-        create_spectrum_bars(m_fftw_output_left, m_fftw_results, height, width,
-                             number_of_bars, &m_bars_left,
-                             &m_bars_falloff_left);
-        create_spectrum_bars(m_fftw_output_right, m_fftw_results, height, width,
-                             number_of_bars, &m_bars_right,
-                             &m_bars_falloff_right);
+            if (1 || is_stereo)
+            {
+                m_fftw_plan_right = fftw_plan_dft_r2c_1d(
+                    static_cast<int>(m_settings->get_sample_size()),
+                    m_fftw_input_right, m_fftw_output_right, FFTW_ESTIMATE);
+            }
 
-        // clear screen before writing
-        writer->clear();
+            std::wstring bar_row_msg =
+                create_bar_row_msg(m_settings->get_spectrum_character(),
+                                m_settings->get_spectrum_bar_width());
 
-        auto max_bar_height = height;
-        if (is_stereo)
-        {
-            ++max_bar_height; // add one so that the spectrums overlap in the
-                              // middle
+            auto number_of_bars = std::max(
+                static_cast<uint32_t>(std::floor(
+                    static_cast<uint32_t>(width) /
+                    (bar_row_msg.size() + m_settings->get_spectrum_bar_spacing()))),
+                1u);
+
+            fftw_execute(m_fftw_plan_left);
+
+            if (1 || is_stereo)
+            {
+                fftw_execute(m_fftw_plan_right);
+            }
+
+            auto top_margin = static_cast<int32_t>(
+                m_settings->get_spectrum_top_margin() * win_height);
+
+            auto height = win_height;
+            height -= top_margin;
+            if (is_stereo)
+            {
+                height = height / 2;
+            }
+
+                create_spectrum_bars(m_fftw_output_left, m_fftw_results, height, width,
+                                    number_of_bars, &m_bars_left,
+                                    &m_bars_falloff_left);
+                create_spectrum_bars(m_fftw_output_right, m_fftw_results, height, width,
+                                    number_of_bars, &m_bars_right,
+                                    &m_bars_falloff_right);
+
+            // clear screen before writing
+            writer->clear();
+
+            auto max_bar_height = height;
+            if (is_stereo)
+            {
+                ++max_bar_height; // add one so that the spectrums overlap in the
+                                // middle
+                draw_bars(m_bars_left, m_bars_falloff_left, max_bar_height, true,
+                    bar_row_msg, writer);
+            }
             draw_bars(m_bars_right, m_bars_falloff_right, max_bar_height, false,
                     bar_row_msg, writer);
+
+
+            writer->flush();
+
+            fftw_destroy_plan(m_fftw_plan_left);
+
+            if (1 || is_stereo)
+            {
+                fftw_destroy_plan(m_fftw_plan_right);
+            }
+        }
+        else
+        {
+            VIS_LOG(vis::LogLevel::DEBUG, "No input, Sleeping for %d milliseconds",
+                    VisConstants::k_silent_sleep_milliseconds);
+            std::this_thread::sleep_for(std::chrono::milliseconds(
+                VisConstants::k_silent_sleep_milliseconds));
         }
 
-        draw_bars(m_bars_left, m_bars_falloff_left, max_bar_height, true,
-                  bar_row_msg, writer);
+    } else {
+        const auto win_height = NcursesUtils::get_window_height();
+        const auto win_width = NcursesUtils::get_window_width();
 
-        writer->flush();
+        auto right_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_right_margin() * win_width);
+        auto left_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_left_margin() * win_width);
 
-        fftw_destroy_plan(m_fftw_plan_left);
+        auto width = win_width - right_margin - left_margin;
+
+        bool is_silent_left = true;
+        bool is_silent_right = true;
 
         if (is_stereo)
         {
-            fftw_destroy_plan(m_fftw_plan_right);
+            is_silent_left =
+                prepare_fft_input(buffer, m_settings->get_sample_size(),
+                                m_fftw_input_left, vis::ChannelMode::Left);
+            is_silent_right =
+                prepare_fft_input(buffer, m_settings->get_sample_size(),
+                                m_fftw_input_right, vis::ChannelMode::Right);
         }
-    }
-    else
-    {
-        VIS_LOG(vis::LogLevel::DEBUG, "No input, Sleeping for %d milliseconds",
-                VisConstants::k_silent_sleep_milliseconds);
-        std::this_thread::sleep_for(std::chrono::milliseconds(
-            VisConstants::k_silent_sleep_milliseconds));
+        else
+        {
+            is_silent_left =
+                prepare_fft_input(buffer, m_settings->get_sample_size(),
+                                m_fftw_input_left, vis::ChannelMode::Both);
+        }
+
+        if (!(is_silent_left && is_silent_right))
+        {
+            m_silent_runs = 0;
+        }
+        // if there is no sound, do not do any processing and sleep
+        else
+        {
+            ++m_silent_runs;
+        }
+
+        if (m_silent_runs < k_max_silent_runs_before_sleep)
+        {
+            m_fftw_plan_left = fftw_plan_dft_r2c_1d(
+                static_cast<int>(m_settings->get_sample_size()), m_fftw_input_left,
+                m_fftw_output_left, FFTW_ESTIMATE);
+
+            if (is_stereo)
+            {
+                m_fftw_plan_right = fftw_plan_dft_r2c_1d(
+                    static_cast<int>(m_settings->get_sample_size()),
+                    m_fftw_input_right, m_fftw_output_right, FFTW_ESTIMATE);
+            }
+
+            std::wstring bar_row_msg =
+                create_bar_row_msg(m_settings->get_spectrum_character(),
+                                m_settings->get_spectrum_bar_width());
+
+            auto number_of_bars = std::max(
+                static_cast<uint32_t>(std::floor(
+                    static_cast<uint32_t>(width) /
+                    (bar_row_msg.size() + m_settings->get_spectrum_bar_spacing()))),
+                1u);
+
+            fftw_execute(m_fftw_plan_left);
+
+            if (is_stereo)
+            {
+                fftw_execute(m_fftw_plan_right);
+            }
+
+            auto top_margin = static_cast<int32_t>(
+                m_settings->get_spectrum_top_margin() * win_height);
+
+            auto height = win_height;
+            height -= top_margin;
+            if (is_stereo)
+            {
+                height = height / 2;
+            }
+
+                create_spectrum_bars(m_fftw_output_left, m_fftw_results, height, width,
+                                    number_of_bars, &m_bars_left,
+                                    &m_bars_falloff_left);
+                create_spectrum_bars(m_fftw_output_right, m_fftw_results, height, width,
+                                    number_of_bars, &m_bars_right,
+                                    &m_bars_falloff_right);
+
+            // clear screen before writing
+            writer->clear();
+
+            auto max_bar_height = height;
+            if (is_stereo)
+            {
+                ++max_bar_height; // add one so that the spectrums overlap in the
+                                // middle
+                draw_bars(m_bars_right, m_bars_falloff_right, max_bar_height, false,
+                        bar_row_msg, writer);
+            }
+
+            draw_bars(m_bars_left, m_bars_falloff_left, max_bar_height, true,
+                    bar_row_msg, writer);
+
+            writer->flush();
+
+            fftw_destroy_plan(m_fftw_plan_left);
+
+            if (is_stereo)
+            {
+                fftw_destroy_plan(m_fftw_plan_right);
+            }
+        }
+        else
+        {
+            VIS_LOG(vis::LogLevel::DEBUG, "No input, Sleeping for %d milliseconds",
+                    VisConstants::k_silent_sleep_milliseconds);
+            std::this_thread::sleep_for(std::chrono::milliseconds(
+                VisConstants::k_silent_sleep_milliseconds));
+        }
     }
 }
 
@@ -493,6 +615,219 @@ void vis::SpectrumTransformer::create_spectrum_bars(
     apply_falloff(*bars, bars_falloff);
 }
 
+
+void vis::SpectrumTransformer::draw_bars(
+    const std::vector<double> &bars, const std::vector<double> &bars_falloff,
+    int32_t win_height, const bool flipped, const std::wstring &bar_row_msg,
+    vis::NcursesWriter *writer)
+{
+
+    if (m_settings->is_spectrum_sideways())
+    {
+        recalculate_colors(static_cast<size_t>(win_height),
+                        m_settings->get_colors(), &m_precomputed_colors, writer);
+
+        const auto full_win_width = NcursesUtils::get_window_width();
+        const auto full_win_height = NcursesUtils::get_window_height();
+        auto top_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_top_margin() * full_win_height);
+        auto bottom_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_bottom_margin() * full_win_height);
+        auto left_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_left_margin() * full_win_width);
+
+        // Sideqways Mode: Bars are drawn left to right (or right to left)
+        for (auto original_column_index = 0u; original_column_index < bars.size();
+             ++original_column_index)
+        {
+            auto column_index = original_column_index;
+            if (m_settings->is_spectrum_reversed())
+            {
+                column_index =
+                    static_cast<uint32_t>(bars.size()) - original_column_index - 1;
+            }
+
+            auto bar_height = 0.0;
+
+            switch (m_settings->get_spectrum_falloff_mode())
+            {
+            case vis::FalloffMode::None:
+                bar_height = bars[column_index];
+                break;
+            case vis::FalloffMode::Fill:
+                bar_height = bars_falloff[column_index];
+                break;
+            case vis::FalloffMode::Top:
+                bar_height = bars[column_index];
+                break;
+            }
+
+            bar_height = std::max(0.0, bar_height);
+
+            for (auto row_index = 0; row_index <= static_cast<int32_t>(bar_height);
+                 ++row_index)
+            {
+                int32_t row_height;
+
+                // left channel grows up, right channel grows down
+                if (flipped)
+                {
+                    row_height = win_height - row_index - 1;
+                }
+                else
+                {
+                    row_height = win_height + row_index - 1;
+                }
+
+                if (!m_settings->is_stereo_enabled()) {
+                    row_height -= NcursesUtils::get_window_width() - 1;
+                }
+
+                auto column =
+                    static_cast<int32_t>(original_column_index) *
+                    static_cast<int32_t>((bar_row_msg.size() +
+                                          m_settings->get_spectrum_bar_spacing()));
+
+                writer->write(column + top_margin - bottom_margin,
+                              row_height + left_margin,
+                              m_precomputed_colors[static_cast<size_t>(row_index)],
+                              bar_row_msg, m_settings->get_spectrum_character());
+            }
+
+            if (m_settings->get_spectrum_falloff_mode() == vis::FalloffMode::Top)
+            {
+                auto row_index = static_cast<int32_t>(bars_falloff[column_index]);
+                int32_t top_row_height;
+
+                // left channel grows up, right channel grows down
+                if (flipped)
+                {
+                    top_row_height = win_height - row_index - 1;
+                }
+                else
+                {
+                    top_row_height = win_height + row_index - 1;
+                }
+
+                if (row_index > 0)
+                {
+                    auto column = static_cast<int32_t>(original_column_index) *
+                                  static_cast<int32_t>(
+                                      (bar_row_msg.size() +
+                                       m_settings->get_spectrum_bar_spacing()));
+
+                    writer->write(
+                        top_row_height + top_margin - bottom_margin,
+                        column + left_margin,
+                        m_precomputed_colors[static_cast<size_t>(row_index)],
+                        bar_row_msg, m_settings->get_spectrum_character());
+                }
+            }
+        }
+    }
+    else
+    {
+        recalculate_colors(static_cast<size_t>(win_height),
+                        m_settings->get_colors(), &m_precomputed_colors, writer);
+
+        const auto full_win_width = NcursesUtils::get_window_width();
+        const auto full_win_height = NcursesUtils::get_window_height();
+        auto top_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_top_margin() * full_win_height);
+        auto bottom_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_bottom_margin() * full_win_height);
+        auto left_margin = static_cast<int32_t>(
+            m_settings->get_spectrum_left_margin() * full_win_width);
+            
+        // Normal Mode: Bars are drawn bottom to top (or top to bottom)
+        for (auto original_column_index = 0u; original_column_index < bars.size();
+             ++original_column_index)
+        {
+            auto column_index = original_column_index;
+            if (m_settings->is_spectrum_reversed())
+            {
+                column_index =
+                    static_cast<uint32_t>(bars.size()) - original_column_index - 1;
+            }
+
+            auto bar_height = 0.0;
+
+            switch (m_settings->get_spectrum_falloff_mode())
+            {
+            case vis::FalloffMode::None:
+                bar_height = bars[column_index];
+                break;
+            case vis::FalloffMode::Fill:
+                bar_height = bars_falloff[column_index];
+                break;
+            case vis::FalloffMode::Top:
+                bar_height = bars[column_index];
+                break;
+            }
+
+            bar_height = std::max(0.0, bar_height);
+
+            for (auto row_index = 0; row_index <= static_cast<int32_t>(bar_height);
+                 ++row_index)
+            {
+                int32_t row_height;
+
+                // left channel grows up, right channel grows down
+                if (flipped)
+                {
+                    row_height = win_height - row_index - 1;
+                }
+                else
+                {
+                    row_height = win_height + row_index - 1;
+                }
+
+                auto column =
+                    static_cast<int32_t>(original_column_index) *
+                    static_cast<int32_t>((bar_row_msg.size() +
+                                          m_settings->get_spectrum_bar_spacing()));
+
+                writer->write(row_height + top_margin - bottom_margin,
+                              column + left_margin,
+                              m_precomputed_colors[static_cast<size_t>(row_index)],
+                              bar_row_msg, m_settings->get_spectrum_character());
+            }
+
+            if (m_settings->get_spectrum_falloff_mode() == vis::FalloffMode::Top)
+            {
+                auto row_index = static_cast<int32_t>(bars_falloff[column_index]);
+                int32_t top_row_height;
+
+                // left channel grows up, right channel grows down
+                if (flipped)
+                {
+                    top_row_height = win_height - row_index - 1;
+                }
+                else
+                {
+                    top_row_height = win_height + row_index - 1;
+                }
+
+                if (row_index > 0)
+                {
+                    auto column = static_cast<int32_t>(original_column_index) *
+                                  static_cast<int32_t>(
+                                      (bar_row_msg.size() +
+                                       m_settings->get_spectrum_bar_spacing()));
+
+                    writer->write(
+                        top_row_height + top_margin - bottom_margin,
+                        column + left_margin,
+                        m_precomputed_colors[static_cast<size_t>(row_index)],
+                        bar_row_msg, m_settings->get_spectrum_character());
+                }
+            }
+        }
+    }
+}
+
+
+/*
 void vis::SpectrumTransformer::draw_bars(
     const std::vector<double> &bars, const std::vector<double> &bars_falloff,
     int32_t win_height, const bool flipped, const std::wstring &bar_row_msg,
@@ -594,6 +929,7 @@ void vis::SpectrumTransformer::draw_bars(
         }
     }
 }
+*/
 
 void vis::SpectrumTransformer::recalculate_cutoff_frequencies(
     uint32_t number_of_bars, std::vector<uint32_t> *low_cutoff_frequencies,

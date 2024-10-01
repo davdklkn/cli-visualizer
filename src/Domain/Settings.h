@@ -227,7 +227,11 @@ class Settings
 
     uint32_t get_spectrum_bar_spacing() const noexcept
     {
-        return m_spectrum_bar_spacing;
+        if (m_is_spectrum_sideways) {
+            return m_spectrum_bar_spacing / 2;
+        } else  {
+            return m_spectrum_bar_spacing;
+        }
     }
 
     void set_spectrum_bar_spacing(const uint32_t spectrum_bar_spacing)
@@ -315,6 +319,16 @@ class Settings
         return m_is_spectrum_reversed;
     }
 
+    void set_is_spectrum_sideways(const bool is_spectrum_sideways)
+    {
+        m_is_spectrum_sideways = is_spectrum_sideways;
+    }
+
+    bool is_spectrum_sideways() const noexcept
+    {
+        return m_is_spectrum_sideways;
+    }
+
     void set_rotation_interval(const int64_t rotation_interval)
     {
         m_rotation_interval = rotation_interval;
@@ -397,6 +411,7 @@ class Settings
     double m_spectrum_right_margin;
     double m_spectrum_left_margin;
     bool m_is_spectrum_reversed;
+    bool m_is_spectrum_sideways;
     int64_t m_rotation_interval;
     std::string m_port_audio_source;
     std::string m_pulse_audio_source;
